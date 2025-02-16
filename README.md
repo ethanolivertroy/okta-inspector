@@ -1,5 +1,7 @@
 # Okta Audit via API Token Guide
 
+
+
 ## Overview
 - This guide outlines API checks for auditing Okta configurations using a dedicated API token
 - `okta-audit.sh` attempts to automate all of these checks in one script
