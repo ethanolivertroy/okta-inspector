@@ -1,9 +1,23 @@
-# Okta Audit via API Token Guide
+# Okta FedRAMP Compliance Audit Tool
 
 ## Overview
-- This guide outlines API checks for auditing Okta configurations using a dedicated API token
-- `okta-audit.sh` attempts to automate all of these checks in one script
-- Thanks to https://developer.okta.com/ for creating an easy developer experience
+- A comprehensive tool for evaluating Okta configurations for FedRAMP compliance
+- Aligns with NIST 800-53 controls for identity and access management
+- `okta-audit.sh` automates all checks and generates a compliance summary report
+- Built to support U.S. Federal security requirements and guidelines
+- Thanks to https://developer.okta.com/ for their comprehensive API documentation
+
+## NIST Controls Coverage
+This tool evaluates Okta configurations against these key NIST 800-53 controls:
+- **AC-2**: Account Management
+- **AC-3**: Access Enforcement
+- **AC-7**: Unsuccessful Login Attempts
+- **AC-11**: Session Lock
+- **IA-2**: Identification and Authentication
+- **IA-5**: Authenticator Management
+- **IA-8**: Identification and Authentication (Non-organizational Users)
+- **AU-2**: Audit Events
+- **SI-4**: Information System Monitoring
 
 ## Prerequisites
 
@@ -31,9 +45,28 @@ curl -s -X GET \
 | jq
 ```
 
+Check FIDO2 Auth Policy settings:
+```bash
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/policies?type=ACCESS_POLICY" \
+| jq
+```
+
+Get FIDO2 authenticator configuration:
+```bash
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/authenticators" \
+| jq
+```
+
 Review the JSON output for:
 - Allowed authenticators (e.g., FIDO2, Okta Verify)
 - Verification that non-compliant methods are disabled
+- FIDO2 WebAuthn configuration and requirements
 
 ### 2. Management Console Login Security
 
@@ -46,7 +79,25 @@ curl -s -X GET \
 | jq
 ```
 
-Verify policies enforcing MFA for administrator groups.
+Get current session information and lifetime:
+```bash
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/sessions/me" \
+| jq
+```
+
+Check global session settings in authorization servers:
+```bash
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/authorizationServers" \
+| jq
+```
+
+Verify policies enforcing MFA for administrator groups and review session lifetime configuration.
 
 ### 3. FIPS Compliance
 
@@ -174,11 +225,30 @@ curl -s -X GET \
 
 Note: Handle pagination using the `Link` header with `rel="next"`.
 
-### 12. Behavioral Detection
+### 12. Behavioral Detection and Threat Insight Settings
 
 Configuration is primarily done through Admin UI:
 - Security → Behavior Detection
 - Limited API visibility through MFA_ENROLL and OKTA_SIGN_ON policies
+
+Check Threat Insight settings and exempt network zones:
+```bash
+# Get Threat Insight configuration (including exempt zones)
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/threats/configuration" \
+| jq
+
+# Get all Network Zones for cross-reference
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/zones" \
+| jq
+```
+
+Review which network zones (if any) are exempted from Threat Insight detection.
 
 ### 13. Notification Settings
 
