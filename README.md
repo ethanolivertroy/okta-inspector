@@ -3,6 +3,7 @@
 ## Overview
 - A comprehensive tool for evaluating Okta configurations for FedRAMP compliance
 - Aligns with NIST 800-53 controls for identity and access management
+- Validates FIPS 140-2/140-3 cryptographic compliance for federal systems
 - `okta-audit.sh` automates all checks and generates a compliance summary report
 - Built to support U.S. Federal security requirements and guidelines
 - Thanks to https://developer.okta.com/ for their comprehensive API documentation
@@ -105,6 +106,46 @@ Verification points:
 - Confirm FedRAMP package type
 - Verify domain is `.okta.mil` or `.okta.gov`
 - Test accessibility of `support.okta-gov.com`
+- Check FIPS-validated cryptographic modules
+
+Check FIPS encryption compliance:
+```bash
+# Check TLS and cryptographic settings
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/authorizationServers/default" \
+| jq
+
+# Check FIPS mode through Factors API
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/org/factors" \
+| jq '.[] | select(.provider.type == "FIDO" or .provider.type == "RSA" or .provider.type == "SYMANTEC")'
+
+# Check IdP settings for FIPS-compliant SHA-256 algorithms
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/idps" \
+| jq '.[] | select(.protocol.algorithms.request.signature.algorithm == "SHA-256" or .protocol.algorithms.response.signature.algorithm == "SHA-256")'
+
+# Check system log for FIPS-related crypto events
+SINCE=$(date -u -d '30 days ago' +"%Y-%m-%dT%H:%M:%SZ")
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/logs?since=${SINCE}&filter=eventType+eq+\"system.crypto.operations\"&limit=100" \
+| jq
+```
+
+Review for:
+- TLS 1.2 or higher with FIPS-approved cipher suites
+- FIPS 140-2/140-3 validated cryptographic modules
+- FIPS-compliant factors (RSA/Symantec tokens, FIPS-certified hardware keys)
+- Use of SHA-256 or stronger signature algorithms
+- Any system logs indicating use of FIPS cryptographic providers
 
 ### 4. Integration Validation
 
