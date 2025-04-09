@@ -257,13 +257,39 @@ for STATUS in ACTIVE LOCKED_OUT PASSWORD_EXPIRED RECOVERY SUSPENDED DEPROVISIONE
     | jq > "users_${STATUS}.json"
 done
 
-# Check inactive users (not logged in for 90+ days)
-INACTIVE_DATE=$(date -u -d '90 days ago' +"%Y-%m-%dT%H:%M:%SZ")
+# Find inactive users (multiple methods)
+
+# Method 1: Using search parameter with last login date (preferred method)
+NINETY_DAYS_AGO=$(date -u -d '90 days ago' +"%Y-%m-%dT%H:%M:%S.000Z")
 curl -s -X GET \
   -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
   -H "Accept: application/json" \
-  "https://${OKTA_DOMAIN}/api/v1/users?filter=lastLogin+lt+\"${INACTIVE_DATE}\"&limit=200" \
-  | jq > inactive_users.json
+  "https://${OKTA_DOMAIN}/api/v1/users?search=last_login%20lt%20%22${NINETY_DAYS_AGO}%22&limit=200" \
+  | jq > inactive_users_by_login.json
+
+# Method 2: Combine users with inactive statuses
+mkdir -p inactive_users_by_status
+for STATUS in SUSPENDED DEPROVISIONED LOCKED_OUT PASSWORD_EXPIRED; do
+  # Use status files we already retrieved if available
+  if [ -f "users_${STATUS}.json" ]; then
+    cp "users_${STATUS}.json" "inactive_users_by_status/inactive_${STATUS}.json"
+  else
+    curl -s -X GET \
+      -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+      -H "Accept: application/json" \
+      "https://${OKTA_DOMAIN}/api/v1/users?filter=status%20eq%20%22${STATUS}%22&limit=200" \
+      | jq > "inactive_users_by_status/inactive_${STATUS}.json"
+  fi
+done
+
+# Method 3: Local filtering with jq (if API methods fail)
+if [ -f "users_ACTIVE.json" ]; then
+  jq --arg date "${NINETY_DAYS_AGO}" '[.[] | select(.lastLogin != null and .lastLogin < $date)]' \
+    users_ACTIVE.json > inactive_by_jq_filter.json
+fi
+
+# Combine all inactive user results into one file
+jq -s 'add | unique_by(.id)' inactive_users_by_login.json inactive_users_by_status/*.json inactive_by_jq_filter.json > inactive_users_combined.json
 ```
 
 ### User Account Management Checklist

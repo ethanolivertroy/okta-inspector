@@ -229,6 +229,45 @@ curl -s -X GET \
 | jq
 ```
 
+#### Find Inactive Users
+
+Method 1: Using search parameter with last login date (preferred method):
+```bash
+# Format date in ISO 8601 format with milliseconds
+NINETY_DAYS_AGO=$(date -u -d '90 days ago' +"%Y-%m-%dT%H:%M:%S.000Z")
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/users?search=last_login%20lt%20%22${NINETY_DAYS_AGO}%22&limit=200" \
+| jq > inactive_users_by_login.json
+```
+
+Method 2: Get users with inactive statuses:
+```bash
+for STATUS in SUSPENDED DEPROVISIONED LOCKED_OUT PASSWORD_EXPIRED; do
+  curl -s -X GET \
+    -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+    -H "Accept: application/json" \
+    "https://${OKTA_DOMAIN}/api/v1/users?filter=status%20eq%20%22${STATUS}%22&limit=200" \
+    | jq > "inactive_${STATUS}.json"
+done
+```
+
+Method 3: Filter locally using jq (if API filtering is unavailable):
+```bash
+# Get all active users
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/users?filter=status+eq+\"ACTIVE\"&limit=200" \
+| jq > active_users.json
+
+# Filter locally for lastLogin older than 90 days
+NINETY_DAYS_AGO=$(date -u -d '90 days ago' +"%Y-%m-%dT%H:%M:%S.000Z")
+jq --arg date "${NINETY_DAYS_AGO}" '[.[] | select(.lastLogin != null and .lastLogin < $date)]' \
+  active_users.json > inactive_by_jq_filter.json
+```
+
 ### 9. Password Policy Review
 
 Check password policies:
