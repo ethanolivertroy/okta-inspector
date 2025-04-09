@@ -220,7 +220,7 @@ okta_get() {
   local backoff_time
   
   # Create a temporary directory for combined results
-  local tmp_dir=$(mktemp -d)
+  tmp_dir=$(mktemp -d)
   trap 'rm -rf "$tmp_dir"' EXIT
 
   # Initialize an empty JSON array for combined results
@@ -401,8 +401,10 @@ okta_get "https://${OKTA_DOMAIN}/api/v1/policies?type=OKTA_SIGN_ON" \
 
 # Get Session Lifetime settings 
 echo "2a) Retrieving Session Lifetime settings..."
-okta_get "https://${OKTA_DOMAIN}/api/v1/sessions/me" \
-  "${OUTPUT_DIR}/session_info.json"
+if ! okta_get "https://${OKTA_DOMAIN}/api/v1/sessions/me" "${OUTPUT_DIR}/session_info.json"; then
+  echo "Note: Session info could not be retrieved (requires active session). Skipping this check."
+  echo "[]" > "${OUTPUT_DIR}/session_info.json"
+fi
 
 # Get global session settings
 echo "2b) Retrieving Global Session Settings..."
@@ -444,9 +446,44 @@ okta_get "https://${OKTA_DOMAIN}/api/v1/idps" \
 
 # Check system log for FIPS-related events
 log_info "3e) Checking system log for FIPS-related crypto events..."
-SINCE=$(date -u -d '30 days ago' +"%Y-%m-%dT%H:%M:%SZ")
-okta_get "https://${OKTA_DOMAIN}/api/v1/logs?since=${SINCE}&filter=eventType+eq+\"system.crypto.operations\"&limit=${PAGE_SIZE}" \
-  "${OUTPUT_DIR}/crypto_events.json"
+# More portable date handling for different systems
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  THIRTY_DAYS_AGO=$(date -v-30d -u +"%Y-%m-%dT%H:%M:%SZ")
+else
+  # Linux and others
+  THIRTY_DAYS_AGO=$(date -u -d '30 days ago' +"%Y-%m-%dT%H:%M:%SZ")
+fi
+SINCE="$THIRTY_DAYS_AGO"
+
+# Try getting logs without complex filters first, but limit to 3 pages max to avoid rate limiting
+ORIGINAL_MAX_PAGES=$MAX_PAGES
+MAX_PAGES=3  # Temporarily reduce max pages for this specific call
+log_info "Note: Retrieving general system logs (limited to ${MAX_PAGES} pages) and then filtering for crypto operations..."
+if ! okta_get "https://${OKTA_DOMAIN}/api/v1/logs?since=${SINCE}&limit=${PAGE_SIZE}" "${OUTPUT_DIR}/all_system_logs_temp.json"; then
+  log_warning "Could not retrieve system logs. Creating empty file for crypto events."
+  echo "[]" > "${OUTPUT_DIR}/crypto_events.json"
+else
+  # Use jq to filter locally instead of relying on Okta's filtering which might be having issues
+  log_info "Filtering downloaded logs for crypto operations..."
+  jq '[.[] | select(.eventType == "system.crypto.operations" or 
+      (.eventType | startswith("system.") and 
+       ((.debugContext // {}) | (.debugData // {}) | (.cryptoProvider // "") | test("FIPS"))
+      ))]' \
+    "${OUTPUT_DIR}/all_system_logs_temp.json" > "${OUTPUT_DIR}/crypto_events.json" 2>/dev/null || {
+      log_warning "Error filtering logs with jq. Creating simplified filter."
+      jq '[.[] | select(.eventType == "system.crypto.operations" or (.eventType | startswith("system.")))]' \
+        "${OUTPUT_DIR}/all_system_logs_temp.json" > "${OUTPUT_DIR}/crypto_events.json" 2>/dev/null || {
+          log_warning "Failed to filter logs. Creating empty crypto events file."
+          echo "[]" > "${OUTPUT_DIR}/crypto_events.json"
+        }
+    }
+  
+  # Remove the temporary file
+  rm -f "${OUTPUT_DIR}/all_system_logs_temp.json"
+fi
+# Restore original MAX_PAGES value
+MAX_PAGES=$ORIGINAL_MAX_PAGES
 
 # Create a report with FIPS compliance checks
 tee "${OUTPUT_DIR}/fips_compliance_report.txt" <<EOF
@@ -587,9 +624,64 @@ okta_get "https://${OKTA_DOMAIN}/api/v1/policies?type=USER_LIFECYCLE" \
 
 # Check inactive users (AC-2(3))
 echo "8c) Retrieving potentially inactive users..."
-INACTIVE_DATE=$(date -u -d '90 days ago' +"%Y-%m-%dT%H:%M:%SZ" | jq -sRr @uri)
-okta_get "https://${OKTA_DOMAIN}/api/v1/users?filter=lastLogin+lt+\"${INACTIVE_DATE}\"&limit=200" \
-  "${OUTPUT_DIR}/inactive_users.json"
+
+# Create a directory for inactive user reports
+INACTIVE_DIR="${OUTPUT_DIR}/inactive_users"
+mkdir -p "${INACTIVE_DIR}"
+
+# More portable date handling for different systems
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  NINETY_DAYS_AGO=$(date -v-90d -u +"%Y-%m-%dT%H:%M:%S.000Z")
+else
+  # Linux and others
+  NINETY_DAYS_AGO=$(date -u -d '90 days ago' +"%Y-%m-%dT%H:%M:%S.000Z")
+fi
+
+# Method 1: Use search parameter with proper syntax for last login
+echo "   - Method 1: Using search parameter with last_login"
+okta_get "https://${OKTA_DOMAIN}/api/v1/users?search=last_login%20lt%20%22${NINETY_DAYS_AGO}%22&limit=200" \
+  "${INACTIVE_DIR}/inactive_by_login_date.json" || {
+  echo "   - Search by last_login failed, creating empty result"
+  echo "[]" > "${INACTIVE_DIR}/inactive_by_login_date.json"
+}
+
+# Method 2: Get users by inactive statuses
+echo "   - Method 2: Getting users by inactive statuses"
+for status in SUSPENDED DEPROVISIONED LOCKED_OUT PASSWORD_EXPIRED; do
+  echo "     - Getting users with status: ${status}"
+  if [[ -s "${OUTPUT_DIR}/users_${status}.json" ]]; then
+    # Copy existing files if we already have them
+    cp "${OUTPUT_DIR}/users_${status}.json" "${INACTIVE_DIR}/inactive_${status}.json"
+  else
+    # Otherwise make the API call
+    encoded_status=$(printf "%s" "$status" | jq -sRr @uri)
+    okta_get "https://${OKTA_DOMAIN}/api/v1/users?filter=status%20eq%20%22${encoded_status}%22&limit=200" \
+      "${INACTIVE_DIR}/inactive_${status}.json" || {
+      echo "[]" > "${INACTIVE_DIR}/inactive_${status}.json"
+    }
+  fi
+done
+
+# Method 3 (Fallback): If other methods fail, filter locally using jq
+echo "   - Method 3: Filtering active users locally by last login date"
+if [[ -s "${OUTPUT_DIR}/users_ACTIVE.json" ]]; then
+  jq --arg date "${NINETY_DAYS_AGO}" '[.[] | select(.lastLogin != null and .lastLogin < $date)]' \
+    "${OUTPUT_DIR}/users_ACTIVE.json" > "${INACTIVE_DIR}/inactive_by_jq_filter.json" 2>/dev/null || {
+      echo "   - Local filtering failed, creating empty result"
+      echo "[]" > "${INACTIVE_DIR}/inactive_by_jq_filter.json"
+    }
+else
+  echo "   - No active users file available for local filtering"
+  echo "[]" > "${INACTIVE_DIR}/inactive_by_jq_filter.json"
+fi
+
+# Combine all inactive users into one consolidated file
+echo "   - Combining all inactive user results"
+jq -s 'add | unique_by(.id)' "${INACTIVE_DIR}"/*.json > "${OUTPUT_DIR}/inactive_users.json" 2>/dev/null || {
+  echo "   - Combining results failed, creating empty consolidated file"
+  echo "[]" > "${OUTPUT_DIR}/inactive_users.json"
+}
 
 tee "${OUTPUT_DIR}/account_management_info.txt" <<EOF
 User account files:
@@ -656,19 +748,51 @@ echo "11) Retrieving System Log events and monitoring configuration..."
 
 # Get recent system logs 
 echo "11a) Retrieving recent system log events (last 24 hours)..."
-SINCE=$(date -u -d '24 hours ago' +"%Y-%m-%dT%H:%M:%SZ")
-okta_get "https://${OKTA_DOMAIN}/api/v1/logs?since=${SINCE}&limit=1000" \
-  "${OUTPUT_DIR}/system_log_recent.json"
+# More portable date handling for different systems
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  SINCE=$(date -v-24H -u +"%Y-%m-%dT%H:%M:%SZ")
+else
+  # Linux and others
+  SINCE=$(date -u -d '24 hours ago' +"%Y-%m-%dT%H:%M:%SZ")
+fi
 
-# Get failed login attempts (AU-2, AC-7)
+# Retrieve logs without complex filters, with limited pages
+ORIGINAL_MAX_PAGES=$MAX_PAGES
+MAX_PAGES=3  # Temporarily reduce max pages for this specific call
+log_info "Note: Retrieving system logs (limited to ${MAX_PAGES} pages)..."
+if ! okta_get "https://${OKTA_DOMAIN}/api/v1/logs?since=${SINCE}&limit=200" "${OUTPUT_DIR}/system_log_recent.json"; then
+  log_warning "Could not retrieve recent system logs. Creating empty file."
+  echo "[]" > "${OUTPUT_DIR}/system_log_recent.json"
+fi
+# Restore original MAX_PAGES value
+MAX_PAGES=$ORIGINAL_MAX_PAGES
+
+# Get failed login attempts (AU-2, AC-7) using local filtering with jq
 echo "11b) Retrieving failed login attempts (last 24 hours)..."
-okta_get "https://${OKTA_DOMAIN}/api/v1/logs?since=${SINCE}&limit=1000&filter=eventType+eq+\"user.authentication.auth_via_mfa\"" \
-  "${OUTPUT_DIR}/failed_authentication_attempts.json"
+if [[ -s "${OUTPUT_DIR}/system_log_recent.json" ]]; then
+  jq '[.[] | select(.eventType == "user.authentication.auth_via_mfa" or .eventType == "user.authentication.auth_via_social" or (.eventType | startswith("user.authentication")))]' \
+    "${OUTPUT_DIR}/system_log_recent.json" > "${OUTPUT_DIR}/failed_authentication_attempts.json" 2>/dev/null || {
+      log_warning "Error filtering auth logs with jq. Creating empty file."
+      echo "[]" > "${OUTPUT_DIR}/failed_authentication_attempts.json"
+    }
+else
+  log_warning "Could not retrieve failed login attempts. Creating empty file."
+  echo "[]" > "${OUTPUT_DIR}/failed_authentication_attempts.json"
+fi
 
-# Get admin actions for audit (AU-2)
+# Get admin actions for audit (AU-2) using local filtering with jq
 echo "11c) Retrieving administrator actions (last 24 hours)..."
-okta_get "https://${OKTA_DOMAIN}/api/v1/logs?since=${SINCE}&limit=1000&filter=eventType+sw+\"system.\"" \
-  "${OUTPUT_DIR}/admin_actions.json"
+if [[ -s "${OUTPUT_DIR}/system_log_recent.json" ]]; then
+  jq '[.[] | select(.eventType | startswith("system."))]' \
+    "${OUTPUT_DIR}/system_log_recent.json" > "${OUTPUT_DIR}/admin_actions.json" 2>/dev/null || {
+      log_warning "Error filtering admin logs with jq. Creating empty file."
+      echo "[]" > "${OUTPUT_DIR}/admin_actions.json"
+    }
+else
+  log_warning "Could not retrieve administrator actions. Creating empty file."
+  echo "[]" > "${OUTPUT_DIR}/admin_actions.json"
+fi
 
 tee "${OUTPUT_DIR}/system_log_readme.txt" <<EOF
 The system log files contain events starting from ${SINCE}.
