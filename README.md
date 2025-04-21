@@ -1,6 +1,7 @@
 # Okta FedRAMP Compliance Audit Tool
 
-![Okta Audit](image.png)
+<img src="image.webp" width="600" alt="Okta Audit">
+
 
 ## Overview
 - A comprehensive tool for evaluating Okta configurations for FedRAMP compliance
