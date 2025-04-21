@@ -1,5 +1,7 @@
 # Okta FedRAMP Compliance Audit Tool
 
+![Okta Audit](image.png)
+
 ## Overview
 - A comprehensive tool for evaluating Okta configurations for FedRAMP compliance
 - Aligns with NIST 800-53 controls for identity and access management
