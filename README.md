@@ -110,6 +110,21 @@ FIPS compliance:   okta_audit_results_20250409_170434/fips_compliance_report.txt
 4. Give your token a meaningful name and copy the generated value
 5. Use this token with the `--token` option or `OKTA_API_TOKEN` environment variable
 
+### Creating a Read-Only API Token
+
+Okta API tokens inherit the permissions of the user account that creates them. To generate a token with read-only access, create and use a dedicated user with the Read-only Administrator role:
+
+1. In the Okta Admin Console, go to **Directory → Administrators**.
+2. Click **Add Administrator**, then select or create a new user for API access.
+3. Assign the **Read-only Administrator** role to this user.
+4. Log out and sign in as the dedicated read-only user.
+5. Navigate to **Security → API → Tokens**, click **Create Token**, and copy the token value.
+6. Use this token with the `--token` option or `OKTA_API_TOKEN` environment variable.
+
+Key Points:
+- Tokens always act with the permissions of their creator; if the user’s role changes or is deactivated, the token’s permissions change or the token becomes invalid.
+- Certain API endpoints may require higher privileges not included in the Read-only Administrator role.
+
 ## Audit Checklist
 For detailed audit checklist and manual evaluation steps, see [okta-evaluation-guide.md](okta-evaluation-guide.md).
 ## Saving Outpus and Filtering Data
