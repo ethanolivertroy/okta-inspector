@@ -1,0 +1,35 @@
+# ------------------------
+# Git Ignore File for Okta Audit Project
+# ------------------------
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# dotenv environment files
+.env
+.env.local
+.env.*.local
+.envrc
+
+# Editor directories and files
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+# Backup and temporary files
+*~
+*.bak
+*.tmp
+
+# Shell script output directories
+okta_audit_results_*
+
+# Log files
+*.log

@@ -18,6 +18,7 @@ This guide provides a systematic approach to manually evaluate an Okta implement
 13. [API Token Management](#14-api-token-management)
 14. [Federal Subscription Validation](#15-federal-subscription-validation)
 15. [NIST 800-53 Control Matrix](#nist-800-53-control-matrix)
+16. [Security Best Practices](#16-security-best-practices)
 
 ## Prerequisites
 
@@ -474,6 +475,60 @@ The following matrix maps key Okta settings to NIST 800-53 controls:
 | **IA-8** | Non-organizational Users | External IdP settings | Social/external identity providers, consistency of requirements |
 | **AU-2** | Audit Events | System logs, monitoring | Event types logged, retention periods, access to logs |
 | **SI-4** | Information System Monitoring | Threat detection, behavioral analysis | Threat Insight, behavior detection rules, alerting mechanisms |
+
+## 16. Security Best Practices
+
+This section outlines general security best practices for an Okta tenant beyond compliance requirements.
+
+### Admin Console Steps
+1. Review the principle of least privilege:
+   - Confirm minimal admin roles and group memberships.
+   - Validate API token scopes and ownership.
+2. Check network security settings:
+   - Navigate to **Security → Network → Network Zones**.
+   - Review IP allowlists and trusted origins.
+3. Validate certificate management:
+   - Navigate to **Security → API → Tokens** and **Settings → Custom URLs** for SSL/TLS certificates.
+4. Review feature release settings:
+   - Navigate to **Settings → Customization → Features** for early-release features; ensure they align with stability and security policies.
+5. Ensure logging and monitoring:
+   - Confirm System Logs are forwarded to your SIEM or logging platform.
+   - Verify alert rules for critical security events.
+6. Incident response readiness:
+   - Check alert notifications under **Settings → General → Security Notifications**.
+
+### API Verification
+```bash
+# List network zones
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/zones" | jq > network_zones.json
+
+# List API tokens
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/tokens?limit=200" | jq > api_tokens.json
+
+# List signing keys
+curl -s -X GET \
+  -H "Authorization: SSWS ${OKTA_API_TOKEN}" \
+  -H "Accept: application/json" \
+  "https://${OKTA_DOMAIN}/api/v1/keys" | jq > signing_keys.json
+```
+
+### Best Practices Checklist
+- [ ] Principle of least privilege enforced: minimal roles, scopes, and group assignments.
+- [ ] Network zones and IP allowlists configured appropriately.
+- [ ] API tokens are rotated regularly and scoped tightly.
+- [ ] SSL/TLS certificates managed and renewed before expiration.
+- [ ] System Logs are centralized, with alerts for critical events.
+- [ ] Incident response procedures are documented and tested.
+- [ ] Backup and recovery processes are in place.
+- [ ] Regular user access reviews are conducted.
+- [ ] Feature release and update settings are reviewed before enabling.
+- [ ] Inline Hooks and custom integrations are audited for security.
 
 ## Documentation Template
 
