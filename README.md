@@ -128,3 +128,7 @@ curl -s ... | jq '.' | tee password_policies.json
 # Extract specific fields
 curl -s ... | jq '.[] | {id, name, conditions, status}'
 ```
+
+## License
+
+This project is licensed under the GNU General Public License version 3.0. See the [COPYING](COPYING) file for the full license text.
