@@ -7,9 +7,11 @@
 - A comprehensive tool for evaluating Okta configurations for FedRAMP compliance
 - Aligns with NIST 800-53 controls for identity and access management
 - Validates FIPS 140-2/140-3 cryptographic compliance for federal systems
-- `okta-audit.sh` automates all checks and generates a compliance summary report
+ - `okta-audit.sh` automates all checks and generates a compliance summary report
+ - Evaluates FedRAMP 20x Phase One Key Security Indicators (KSIs) and creates a machine-readable summary (`fedramp_20x_summary.md`)
 - Built to support U.S. Federal security requirements and guidelines
-- Thanks to https://developer.okta.com/ for their comprehensive API documentation
+ - Thanks to https://developer.okta.com/ for their comprehensive API documentation
+ - FedRAMP 20x Phase One Key Security Indicators RFC and discussion: https://github.com/FedRAMP/rfcs/discussions/18
 
 ## NIST Controls Coverage
 This tool evaluates Okta configurations against these key NIST 800-53 controls:
@@ -100,6 +102,7 @@ Results directory: okta_audit_results_20250409_170434
 Zipped archive:    okta_audit_20250409.zip
 FedRAMP summary:   okta_audit_results_20250409_170434/fedramp_compliance_summary.md
 FIPS compliance:   okta_audit_results_20250409_170434/fips_compliance_report.txt
+FedRAMP 20x summary:   okta_audit_results_20250409_170434/fedramp_20x_summary.md
 ```
 
 ### Obtaining an Okta API Token

@@ -899,5 +899,47 @@ echo
 echo "All checks complete!"
 echo "Results directory: $OUTPUT_DIR"
 echo "Zipped archive:    $ZIPFILE"
-echo "FedRAMP summary:   ${OUTPUT_DIR}/fedramp_compliance_summary.md" 
+echo "FedRAMP summary:   ${OUTPUT_DIR}/fedramp_compliance_summary.md"
 echo "FIPS compliance:   ${OUTPUT_DIR}/fips_compliance_report.txt"
+
+# FedRAMP 20x Phase One Key Security Indicators Evaluation
+echo "Evaluating FedRAMP 20x Phase One Key Security Indicators..."
+tee "${OUTPUT_DIR}/fedramp_20x_summary.md" <<EOF
+# FedRAMP 20x Phase One Key Security Indicators Evaluation
+
+Generated: $(date)
+Domain: ${OKTA_DOMAIN}
+
+## KSI-IAM: Identity and Access Management
+- Phishing-resistant MFA (FIDO/WebAuthn): $(if jq -e '[.[] | select(.key=="fido" or .key=="web_authn")] | length>0' "${OUTPUT_DIR}/authenticators.json" >/dev/null 2>&1; then echo "PASS"; else echo "FAIL"; fi)
+- Strong password enforcement (min length ≥12, breached pwd detection): $( \
+    length=$(jq '[.[] | .settings.password.minLength] | max' "${OUTPUT_DIR}/password_policies.json" 2>/dev/null || echo 0); \
+    dict=$(jq 'any(.[]; .settings.password.dictionary.enable==true)' "${OUTPUT_DIR}/password_policies.json" 2>/dev/null || echo "false"); \
+    if [[ $length -ge 12 && $dict == "true" ]]; then echo "PASS"; else echo "FAIL"; fi)
+- Secure API authentication methods (OAuth 2.0): $(if [[ "$TOKEN_TYPE" == "Bearer" ]]; then echo "PASS"; else echo "REVIEW"; fi)
+- Least-privileged, role-based, just-in-time model: REVIEW
+
+## KSI-MLA: Monitoring, Logging & Auditing
+- SIEM integration (recent system logs): $(if jq 'length>0' "${OUTPUT_DIR}/system_log_recent.json" >/dev/null 2>&1; then echo "PASS"; else echo "FAIL"; fi)
+- Administrator actions logged: $(if jq 'length>0' "${OUTPUT_DIR}/admin_actions.json" >/dev/null 2>&1; then echo "PASS"; else echo "FAIL"; fi)
+- Behavior Detection & Threat Insight: REVIEW
+
+## KSI-CM: Change Management
+- System modifications logged: $(if jq 'length>0' "${OUTPUT_DIR}/admin_actions.json" >/dev/null 2>&1; then echo "PASS"; else echo "FAIL"; fi)
+- Change procedures and testing: REVIEW
+
+## KSI-PI: Policy and Inventory
+- Asset inventory (apps list): $(if jq 'length>0' "${OUTPUT_DIR}/apps.json" >/dev/null 2>&1; then echo "PASS"; else echo "FAIL"; fi)
+- Defined security policies (password & MFA): $(if jq 'length>0' "${OUTPUT_DIR}/password_policies.json" >/dev/null 2>&1 && jq 'length>0' "${OUTPUT_DIR}/mfa_enrollment_policies.json" >/dev/null 2>&1; then echo "PASS"; else echo "FAIL"; fi)
+
+## KSI-3IR: Third Party Information Resources
+- External identity providers configured: $(if jq 'length>0' "${OUTPUT_DIR}/idp_settings.json" >/dev/null 2>&1; then echo "PASS"; else echo "NONE"; fi)
+- FedRAMP-authorized external services: REVIEW
+
+EOF
+
+# Add FedRAMP 20x summary to zip archive
+zip -ur "$ZIPFILE" "${OUTPUT_DIR}/fedramp_20x_summary.md" >/dev/null 2>&1 || true
+
+# Notify user about FedRAMP 20x summary
+echo "FedRAMP 20x summary:   ${OUTPUT_DIR}/fedramp_20x_summary.md"
