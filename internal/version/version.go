@@ -7,10 +7,11 @@ import (
 
 // Set via ldflags at build time.
 var (
-	Version   = "dev"
-	Commit    = "none"
-	Date      = "unknown"
-	GoVersion = runtime.Version()
+	Version      = "dev"
+	Commit       = "none"
+	Date         = "unknown"
+	ManifestName = ""
+	GoVersion    = runtime.Version()
 )
 
 func Full() string {

@@ -14,8 +14,9 @@ func BuildRestricted(manifest *Manifest, outputPath, targetOS, targetArch string
 		return fmt.Errorf("invalid manifest: %w", err)
 	}
 
-	// Build ldflags to embed capability info
-	ldflags := fmt.Sprintf("-s -w -X 'github.com/ethanolivertroy/okta-inspector/internal/version.Version=%s'",
+	// Build ldflags to embed capability info.
+	// Note: exec.Command doesn't use a shell, so no single quotes around -X values.
+	ldflags := fmt.Sprintf("-s -w -X github.com/ethanolivertroy/okta-inspector/internal/version.ManifestName=%s",
 		manifest.Name)
 
 	args := []string{"build", "-ldflags", ldflags, "-o", outputPath, "."}

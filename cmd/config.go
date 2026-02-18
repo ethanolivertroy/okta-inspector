@@ -22,7 +22,13 @@ var configShowCmd = &cobra.Command{
 			return err
 		}
 
-		data, err := yaml.Marshal(cfg)
+		// Redact sensitive fields before printing
+		redacted := *cfg
+		if redacted.Token != "" {
+			redacted.Token = "<redacted>"
+		}
+
+		data, err := yaml.Marshal(&redacted)
 		if err != nil {
 			return err
 		}
