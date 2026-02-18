@@ -1,0 +1,44 @@
+name: "okta-inspector-full"
+description: "Full build with all capabilities"
+
+capabilities:
+  api_scopes:
+    - policies:read
+    - users:read
+    - apps:read
+    - authenticators:read
+    - logs:read
+    - security:read
+    - identity:read
+
+  frameworks:
+    - stig
+    - fedramp
+    - irap
+    - ismap
+    - soc2
+    - pcidss
+
+  commands:
+    - audit
+    - report
+    - interactive
+    - serve-mcp
+    - build
+    - config
+    - version
+
+  mcp_tools:
+    - run_audit
+    - query_findings
+    - check_control
+    - list_frameworks
+    - generate_report
+    - test_connection
+    - get_snapshot
+
+output:
+  formats:
+    - markdown
+    - json
+  allow_archive: true

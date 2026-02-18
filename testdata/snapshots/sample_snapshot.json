@@ -1,0 +1,153 @@
+{
+  "domain": "test-org.okta.com",
+  "collected": "2026-02-18T12:00:00Z",
+  "sign_on_policies": [
+    {
+      "id": "policy-signon-1",
+      "name": "Default Sign-On Policy",
+      "type": "OKTA_SIGN_ON",
+      "status": "ACTIVE",
+      "priority": 1,
+      "system": true
+    }
+  ],
+  "password_policies": [
+    {
+      "id": "policy-password-1",
+      "name": "Default Password Policy",
+      "type": "PASSWORD",
+      "status": "ACTIVE",
+      "priority": 1,
+      "settings": {
+        "password": {
+          "complexity": {
+            "minLength": 12,
+            "minLowerCase": 1,
+            "minUpperCase": 1,
+            "minNumber": 1,
+            "minSymbol": 0,
+            "excludeUsername": true,
+            "dictionary": {
+              "common": {
+                "exclude": true
+              }
+            }
+          },
+          "age": {
+            "maxAgeDays": 90,
+            "expireWarnDays": 7,
+            "minAgeMinutes": 60,
+            "historyCount": 4
+          },
+          "lockout": {
+            "maxAttempts": 5,
+            "autoUnlockMinutes": 30,
+            "showLockoutFailures": true
+          }
+        }
+      }
+    }
+  ],
+  "mfa_enrollment_policies": [
+    {
+      "id": "policy-mfa-1",
+      "name": "Default MFA Enrollment",
+      "type": "MFA_ENROLL",
+      "status": "ACTIVE",
+      "priority": 1
+    }
+  ],
+  "access_policies": [
+    {
+      "id": "policy-access-1",
+      "name": "Okta Dashboard",
+      "type": "ACCESS_POLICY",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "policy-access-2",
+      "name": "Okta Admin Console",
+      "type": "ACCESS_POLICY",
+      "status": "ACTIVE"
+    }
+  ],
+  "lifecycle_policies": [
+    {
+      "id": "policy-lifecycle-1",
+      "name": "Default Lifecycle Policy",
+      "type": "USER_LIFECYCLE",
+      "status": "ACTIVE"
+    }
+  ],
+  "policy_rules": {
+    "policy-signon-1": [
+      {
+        "id": "rule-1",
+        "name": "Default Rule",
+        "type": "SIGN_ON",
+        "status": "ACTIVE",
+        "actions": {
+          "signon": {
+            "session": {
+              "maxSessionIdleMinutes": 20,
+              "maxSessionLifetimeMinutes": 720,
+              "usePersistentCookie": false
+            }
+          }
+        }
+      }
+    ]
+  },
+  "users": [
+    {
+      "id": "user-1",
+      "status": "ACTIVE",
+      "created": "2025-01-01T00:00:00Z",
+      "lastLogin": "2026-02-15T10:00:00Z",
+      "lastUpdated": "2026-02-15T10:00:00Z",
+      "profile": {"login": "admin@test-org.com", "email": "admin@test-org.com", "firstName": "Admin", "lastName": "User"}
+    },
+    {
+      "id": "user-2",
+      "status": "ACTIVE",
+      "created": "2025-06-01T00:00:00Z",
+      "lastLogin": "2025-10-01T10:00:00Z",
+      "lastUpdated": "2025-10-01T10:00:00Z",
+      "profile": {"login": "stale@test-org.com", "email": "stale@test-org.com", "firstName": "Stale", "lastName": "User"}
+    }
+  ],
+  "groups": [
+    {"id": "group-1", "type": "BUILT_IN", "profile": {"name": "Everyone", "description": "All users"}},
+    {"id": "group-2", "type": "OKTA_GROUP", "profile": {"name": "Admins", "description": "Admin users"}},
+    {"id": "group-3", "type": "OKTA_GROUP", "profile": {"name": "Developers", "description": "Developer users"}}
+  ],
+  "apps": [
+    {"id": "app-1", "name": "okta_dashboard", "label": "Okta Dashboard", "status": "ACTIVE", "signOnMode": "OPENID_CONNECT"},
+    {"id": "app-2", "name": "slack", "label": "Slack", "status": "ACTIVE", "signOnMode": "SAML_2_0"}
+  ],
+  "authenticators": [
+    {"id": "auth-1", "key": "okta_password", "name": "Password", "type": "password", "status": "ACTIVE"},
+    {"id": "auth-2", "key": "okta_verify", "name": "Okta Verify", "type": "app", "status": "ACTIVE"},
+    {"id": "auth-3", "key": "okta_email", "name": "Email", "type": "email", "status": "ACTIVE"}
+  ],
+  "identity_providers": [],
+  "authorization_servers": [
+    {"id": "authz-1", "name": "default", "status": "ACTIVE"}
+  ],
+  "network_zones": [
+    {"id": "zone-1", "name": "Corporate Network", "type": "IP", "status": "ACTIVE"}
+  ],
+  "trusted_origins": [
+    {"id": "origin-1", "name": "App Origin", "origin": "https://app.test-org.com", "status": "ACTIVE"}
+  ],
+  "threat_insight": {"action": "none"},
+  "behaviors": [
+    {"id": "behavior-1", "name": "New Device", "type": "ANOMALOUS_DEVICE", "status": "ACTIVE"}
+  ],
+  "event_hooks": [],
+  "log_streams": [],
+  "system_logs": [],
+  "domains": [],
+  "brands": [],
+  "org_factors": []
+}
