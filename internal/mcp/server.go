@@ -127,7 +127,7 @@ func (s *Server) toolRunAudit(ctx context.Context, args map[string]any) (string,
 	}
 	s.result = result
 
-	data, _ := json.MarshalIndent(map[string]any{
+	return marshalJSON(map[string]any{
 		"domain":         result.Domain,
 		"frameworks":     len(result.Frameworks),
 		"total_findings": result.TotalFindings,
@@ -135,8 +135,7 @@ func (s *Server) toolRunAudit(ctx context.Context, args map[string]any) (string,
 		"fail":           result.TotalFail,
 		"manual":         result.TotalManual,
 		"api_calls":      result.APICallCount,
-	}, "", "  ")
-	return string(data), nil
+	})
 }
 
 func (s *Server) toolQueryFindings(args map[string]any) (string, error) {
@@ -164,11 +163,10 @@ func (s *Server) toolQueryFindings(args map[string]any) (string, error) {
 		}
 	}
 
-	data, _ := json.MarshalIndent(map[string]any{
+	return marshalJSON(map[string]any{
 		"count":    len(filtered),
 		"findings": filtered,
-	}, "", "  ")
-	return string(data), nil
+	})
 }
 
 func (s *Server) toolListFrameworks() (string, error) {
@@ -181,14 +179,22 @@ func (s *Server) toolListFrameworks() (string, error) {
 			"checks": len(fw.Checks()),
 		})
 	}
-	data, _ := json.MarshalIndent(list, "", "  ")
-	return string(data), nil
+	return marshalJSON(list)
 }
 
 func (s *Server) toolTestConnection(ctx context.Context) (string, error) {
 	client := okta.NewClient(s.Domain, s.AuthHeader)
 	if err := client.TestConnection(ctx); err != nil {
-		return fmt.Sprintf(`{"connected": false, "error": "%s"}`, err), nil
+		return marshalJSON(map[string]any{"connected": false, "error": err.Error()})
 	}
-	return `{"connected": true}`, nil
+	return marshalJSON(map[string]any{"connected": true})
+}
+
+// marshalJSON safely serializes a value to indented JSON.
+func marshalJSON(v any) (string, error) {
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshaling response: %w", err)
+	}
+	return string(data), nil
 }

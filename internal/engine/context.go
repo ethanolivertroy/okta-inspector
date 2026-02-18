@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ethanolivertroy/okta-inspector/internal/okta"
 )
@@ -127,4 +128,13 @@ func (ec *EvalContext) AuthorizationServers() ([]okta.AuthorizationServer, error
 
 func (ec *EvalContext) SystemLogs() ([]okta.SystemLog, error) {
 	return decode[[]okta.SystemLog](ec, "system_logs", ec.Snapshot.SystemLogs)
+}
+
+// Now returns the snapshot collection time for deterministic analysis.
+// Falls back to time.Now() if the snapshot has no collection timestamp.
+func (ec *EvalContext) Now() time.Time {
+	if !ec.Snapshot.Collected.IsZero() {
+		return ec.Snapshot.Collected
+	}
+	return time.Now()
 }

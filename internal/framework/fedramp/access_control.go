@@ -3,7 +3,6 @@ package fedramp
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ethanolivertroy/okta-inspector/internal/engine"
 )
@@ -37,7 +36,7 @@ func (c *InactiveAccounts) Evaluate(ctx context.Context, ec *engine.EvalContext)
 		return nil, err
 	}
 
-	cutoff := time.Now().AddDate(0, 0, -90)
+	cutoff := ec.Now().AddDate(0, 0, -90)
 	var findings []engine.Finding
 	inactiveCount := 0
 

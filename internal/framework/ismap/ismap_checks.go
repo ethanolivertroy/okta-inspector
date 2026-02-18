@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ethanolivertroy/okta-inspector/internal/engine"
 )
@@ -87,7 +86,7 @@ func (c *UserDeregistration) Evaluate(ctx context.Context, ec *engine.EvalContex
 		return nil, err
 	}
 
-	cutoff := time.Now().AddDate(0, 0, -90)
+	cutoff := ec.Now().AddDate(0, 0, -90)
 	inactiveCount := 0
 	totalActive := 0
 
