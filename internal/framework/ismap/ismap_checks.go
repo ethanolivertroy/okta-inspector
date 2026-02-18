@@ -447,6 +447,7 @@ func (c *EventLogging) Evaluate(ctx context.Context, ec *engine.EvalContext) ([]
 	c.init()
 
 	logStreams, _ := ec.LogStreams()
+	eventHooks, _ := ec.EventHooks()
 
 	activeStreams := 0
 	for _, s := range logStreams {
@@ -454,15 +455,21 @@ func (c *EventLogging) Evaluate(ctx context.Context, ec *engine.EvalContext) ([]
 			activeStreams++
 		}
 	}
+	activeHooks := 0
+	for _, h := range eventHooks {
+		if h.Status == "ACTIVE" {
+			activeHooks++
+		}
+	}
 
-	if activeStreams > 0 {
+	if activeStreams > 0 || activeHooks > 0 {
 		return []engine.Finding{{
 			CheckID:  c.CheckID,
 			Title:    c.CheckTitle,
 			Severity: c.CheckSeverity,
 			Status:   engine.StatusPass,
-			Comments: fmt.Sprintf("Event logging configured with %d active log streams", activeStreams),
-			Evidence: map[string]any{"activeStreams": activeStreams},
+			Comments: fmt.Sprintf("Event logging configured: %d active log streams, %d active event hooks", activeStreams, activeHooks),
+			Evidence: map[string]any{"activeStreams": activeStreams, "activeHooks": activeHooks},
 			CrossReferences: c.CrossRefs,
 		}}, nil
 	}
@@ -472,8 +479,8 @@ func (c *EventLogging) Evaluate(ctx context.Context, ec *engine.EvalContext) ([]
 		Title:       c.CheckTitle,
 		Severity:    c.CheckSeverity,
 		Status:      engine.StatusFail,
-		Comments:    "No active log streams found for event logging",
-		Remediation: "Configure at least one log stream for event logging per ISO 27001 A.12.4.1",
+		Comments:    "No active log streams or event hooks found for event logging",
+		Remediation: "Configure at least one log stream or event hook for event logging per ISO 27001 A.12.4.1",
 		CrossReferences: c.CrossRefs,
 	}}, nil
 }

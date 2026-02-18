@@ -14,6 +14,9 @@ import (
 
 // RunAudit executes the 3-phase audit pipeline.
 func (a *App) RunAudit(ctx context.Context) (*engine.AuditResult, error) {
+	// Resolve output dir once so snapshot and reports use the same directory
+	a.Options.OutputDir = a.resolveOutputDir()
+
 	// Phase 1: Collection
 	snap, err := a.collectData(ctx)
 	if err != nil {

@@ -90,7 +90,11 @@ func (c *Client) fetchJSON(ctx context.Context, endpoint string) (json.RawMessag
 
 // fetchList fetches a paginated list endpoint.
 func (c *Client) fetchList(ctx context.Context, endpoint string) (json.RawMessage, error) {
-	url := fmt.Sprintf("%s%s?limit=%d", c.BaseURL, endpoint, c.PageSize)
+	sep := "?"
+	if strings.Contains(endpoint, "?") {
+		sep = "&"
+	}
+	url := fmt.Sprintf("%s%s%slimit=%d", c.BaseURL, endpoint, sep, c.PageSize)
 	var allResults []json.RawMessage
 
 	for page := 0; page < c.MaxPages && url != ""; page++ {

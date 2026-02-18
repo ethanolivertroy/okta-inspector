@@ -31,9 +31,10 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 
 	// If we have credentials (via flag or env), pre-run an audit
 	auth, authErr := config.ResolveAuth(flagToken, flagOAuth)
-	if flagDomain != "" && authErr == nil {
+	resolvedDomain := domain
+	if resolvedDomain != "" && resolvedDomain != "not configured" && authErr == nil {
 		opts := app.Options{
-			Domain:       domain,
+			Domain:       resolvedDomain,
 			AuthHeader:   auth.AuthHeader(),
 			SaveSnapshot: true,
 			Format:       "both",

@@ -72,6 +72,12 @@ var configSetCmd = &cobra.Command{
 		case "domain":
 			cfg.Domain = args[1]
 		case "format":
+			switch args[1] {
+			case "json", "markdown", "both":
+				// valid
+			default:
+				return fmt.Errorf("invalid format %q: must be json, markdown, or both", args[1])
+			}
 			cfg.Format = args[1]
 		case "output_dir":
 			cfg.OutputDir = args[1]
