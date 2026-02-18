@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/ethanolivertroy/okta-inspector/internal/engine"
 	"github.com/ethanolivertroy/okta-inspector/internal/framework/fedramp"
 	"github.com/ethanolivertroy/okta-inspector/internal/framework/irap"
@@ -49,11 +51,15 @@ func New(opts Options) *App {
 }
 
 // registerFrameworks adds all built-in compliance frameworks.
+// Panics on duplicate registration, which indicates a programming error.
 func registerFrameworks(reg *engine.Registry) {
-	_ = reg.Register(stig.New())
-	_ = reg.Register(fedramp.New())
-	_ = reg.Register(irap.New())
-	_ = reg.Register(ismap.New())
-	_ = reg.Register(soc2.New())
-	_ = reg.Register(pcidss.New())
+	frameworks := []engine.Framework{
+		stig.New(), fedramp.New(), irap.New(),
+		ismap.New(), soc2.New(), pcidss.New(),
+	}
+	for _, fw := range frameworks {
+		if err := reg.Register(fw); err != nil {
+			panic(fmt.Sprintf("registering framework %s: %v", fw.ID(), err))
+		}
+	}
 }

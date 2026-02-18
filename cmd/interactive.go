@@ -29,13 +29,9 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 
 	m := tui.New(domain)
 
-	// If we have credentials, pre-run an audit
-	if flagDomain != "" && flagToken != "" {
-		auth, err := config.ResolveAuth(flagToken, flagOAuth)
-		if err != nil {
-			return err
-		}
-
+	// If we have credentials (via flag or env), pre-run an audit
+	auth, authErr := config.ResolveAuth(flagToken, flagOAuth)
+	if flagDomain != "" && authErr == nil {
 		opts := app.Options{
 			Domain:       domain,
 			AuthHeader:   auth.AuthHeader(),

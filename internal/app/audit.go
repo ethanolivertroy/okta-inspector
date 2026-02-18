@@ -115,7 +115,7 @@ func writeJSON(path string, v any) error {
 	if err != nil {
 		return fmt.Errorf("marshaling JSON: %w", err)
 	}
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 func writeMarkdownReport(outDir string, result *engine.AuditResult) error {
@@ -151,15 +151,21 @@ This audit evaluates Okta configuration against %d compliance frameworks.
 		}
 	}
 
-	summary += `
-## Manual Verification Required
-- DOD Warning Banner configuration
-- FIPS compliance mode verification
-- Workflow automations for account inactivity
-- Certificate authority validation
-`
+	summary += "\n## Manual Verification Required\n"
+	hasManual := false
+	for _, fw := range result.Frameworks {
+		for _, f := range fw.Findings {
+			if f.Status == engine.StatusManual {
+				summary += fmt.Sprintf("- [%s] %s: %s\n", f.CheckID, f.Title, f.Comments)
+				hasManual = true
+			}
+		}
+	}
+	if !hasManual {
+		summary += "No manual checks identified.\n"
+	}
 
-	if err := os.WriteFile(filepath.Join(outDir, "executive_summary.md"), []byte(summary), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(outDir, "executive_summary.md"), []byte(summary), 0o600); err != nil {
 		return err
 	}
 
@@ -190,7 +196,7 @@ This audit evaluates Okta configuration against %d compliance frameworks.
 		}
 
 		filename := filepath.Join(outDir, fmt.Sprintf("%s_report.md", fw.FrameworkID))
-		if err := os.WriteFile(filename, []byte(report), 0o644); err != nil {
+		if err := os.WriteFile(filename, []byte(report), 0o600); err != nil {
 			return err
 		}
 	}
@@ -221,5 +227,5 @@ This matrix shows cross-framework control mappings.
 		}
 	}
 
-	return os.WriteFile(filepath.Join(outDir, "compliance_matrix.md"), []byte(matrix), 0o644)
+	return os.WriteFile(filepath.Join(outDir, "compliance_matrix.md"), []byte(matrix), 0o600)
 }

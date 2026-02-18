@@ -94,8 +94,15 @@ func runStdioServer(server *mcp.Server) error {
 				"tools": server.ListTools(),
 			}
 		case "tools/call":
-			toolName, _ := req.Params["name"].(string)
+			toolName, ok := req.Params["name"].(string)
+			if !ok || toolName == "" {
+				rpcErr = &rpcError{Code: -32602, Message: "missing or invalid 'name' parameter"}
+				break
+			}
 			toolArgs, _ := req.Params["arguments"].(map[string]any)
+			if toolArgs == nil {
+				toolArgs = make(map[string]any)
+			}
 			content, err := server.CallTool(context.Background(), toolName, toolArgs)
 			if err != nil {
 				rpcErr = &rpcError{Code: -32000, Message: err.Error()}

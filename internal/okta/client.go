@@ -130,7 +130,11 @@ func (c *Client) fetchList(ctx context.Context, endpoint string) (json.RawMessag
 		resp.Body.Close()
 
 		allResults = append(allResults, items...)
-		url = parseLinkHeader(resp.Header.Get("Link"), "next")
+		nextURL := parseLinkHeader(resp.Header.Get("Link"), "next")
+		if nextURL != "" && !validatePaginationURL(nextURL, c.BaseURL) {
+			break // refuse to follow redirects to a different origin
+		}
+		url = nextURL
 	}
 
 	if len(allResults) == 0 {

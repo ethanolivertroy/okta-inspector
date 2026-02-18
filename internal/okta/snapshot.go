@@ -60,7 +60,7 @@ func (s *Snapshot) SaveToFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("marshaling snapshot: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("writing snapshot: %w", err)
 	}
 	return nil

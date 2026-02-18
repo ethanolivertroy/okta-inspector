@@ -44,6 +44,16 @@ func (m *Manifest) Validate() error {
 		}
 	}
 
+	knownScopes := make(map[string]bool)
+	for _, s := range AllScopes {
+		knownScopes[s] = true
+	}
+	for _, s := range m.Capabilities.APIScopes {
+		if !knownScopes[s] {
+			return fmt.Errorf("unknown API scope in manifest: %s", s)
+		}
+	}
+
 	return nil
 }
 

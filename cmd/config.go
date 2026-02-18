@@ -35,7 +35,7 @@ var configShowCmd = &cobra.Command{
 
 var configInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Create configuration file interactively",
+	Short: "Create default configuration file",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := config.DefaultConfigPath()
 		cfg := &config.Config{

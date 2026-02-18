@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -20,4 +21,18 @@ func parseLinkHeader(header, rel string) string {
 		}
 	}
 	return ""
+}
+
+// validatePaginationURL ensures the next-page URL shares the same origin as baseURL
+// to prevent SSRF via a malicious Link header.
+func validatePaginationURL(nextURL, baseURL string) bool {
+	next, err := url.Parse(nextURL)
+	if err != nil {
+		return false
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return false
+	}
+	return next.Scheme == base.Scheme && next.Host == base.Host
 }
