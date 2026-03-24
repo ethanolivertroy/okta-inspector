@@ -36,3 +36,24 @@ okta_audit_results_*
 
 # Claude guidance file
 CLAUDE.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+*.egg
+
+# uv
+.python-version
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Audit output archives
+okta_audit_*.zip
